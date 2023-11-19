@@ -1,5 +1,6 @@
 import tkinter as tk
 import random
+from puzzle import a_star_puzzle
 
 class NPuzzle:
     def __init__(self, master, size=3):
@@ -37,7 +38,7 @@ class NPuzzle:
             self.swap_positions((x, y), self.blank_position)
             self.update_buttons()
             if self.is_solved():
-                print("Puzzle resolvido!")
+                print("Puzzle Solved!")
 
     def is_adjacent(self, pos1, pos2):
         return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1]) == 1
@@ -59,10 +60,32 @@ class NPuzzle:
                     return False
         return True
 
+def buttons_2_list(btn):
+    final_lst = []
+    for row in btn:
+        lst = []
+        for col in row:
+            val = col.cget("text")
+            if val == '':
+                lst.append(0)
+            else:
+                lst.append(int(val))
+        final_lst.append(lst)
+    return final_lst
+
 def main():
     root = tk.Tk()
     root.title("N-Puzzle Game")
-    game = NPuzzle(root, 3)
+    N = 3
+    game = NPuzzle(root, N)
+    initial_state = buttons_2_list(game.buttons)
+    goal_state = [[1, 2, 3], [4, 5, 6], [7, 8, 0]]
+    path = a_star_puzzle(initial_state, goal_state, N)
+    for step in path:
+        for row in step:
+            print(row)
+        print()
+
     root.mainloop()
 
 if __name__ == "__main__":
