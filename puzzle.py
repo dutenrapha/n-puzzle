@@ -1,3 +1,9 @@
+import sys
+import heapq
+from queue import PriorityQueue
+from queue import Queue
+from queue import LifoQueue
+
 def manhattan_distance(state, goal, N):
     distance = 0
     for i in range(N):
@@ -6,6 +12,7 @@ def manhattan_distance(state, goal, N):
                 goal_i, goal_j = next((x, y) for x in range(N) for y in range(N) if goal[x][y] == state[i][j])
                 distance += abs(goal_i - i) + abs(goal_j - j)
     return distance
+
 
 def get_neighbors(state, N):
     neighbors = []
@@ -22,8 +29,12 @@ def get_neighbors(state, N):
 
 def a_star_puzzle(start, goal, N):
     open_set = [(manhattan_distance(start, goal, N), start, 0, None)]
+    #print(open_set)
+    open_set_set = set([tuple(map(tuple, start))])
     came_from = {}
     g_score = {str(start): 0}
+    #print(g_score)
+    #sys.exit()
 
     while open_set:
         _, current, g, parent = min(open_set, key=lambda x: x[0])
@@ -48,3 +59,4 @@ def a_star_puzzle(start, goal, N):
                     open_set.append((neighbor_f, neighbor, neighbor_g, current))
 
     return "Path nor found"
+
