@@ -1,62 +1,94 @@
-import sys
 import heapq
-from queue import PriorityQueue
-from queue import Queue
-from queue import LifoQueue
 
-def manhattan_distance(state, goal, N):
-    distance = 0
-    for i in range(N):
-        for j in range(N):
-            if state[i][j] != 0:
-                goal_i, goal_j = next((x, y) for x in range(N) for y in range(N) if goal[x][y] == state[i][j])
-                distance += abs(goal_i - i) + abs(goal_j - j)
-    return distance
+from metrics import euclidean_distance, misplaced_tiles, chebyshev_distance, manhattan_distance 
+def h(state, goal, N, algo):
+    if algo == 'euclidean': 
+      return(euclidean_distance(state, goal, N))
+    elif algo == 'misplaced': 
+      return(misplaced_tiles(state, goal))
+    elif algo == 'chebyshev': 
+      return(chebyshev_distance(state, goal, N))
+    else:
+      return(manhattan_distance(state, goal, N))
+
+def get_successors(state, N):
+    successors = []
+    b = state.index(0)
+    d, w = divmod(b, N)
+   
+    if d < N - 1:
+        idx = b + N
+        successors.append(('Down', state[:b] + [state[idx]] + state[b+1:idx] + [0] + state[idx+1:]))
 
 
-def get_neighbors(state, N):
-    neighbors = []
-    i, j = next((i, j) for i, row in enumerate(state) for j, x in enumerate(row) if x == 0)
-    directions = [(0, 1), (1, 0), (0, -1), (-1, 0)]
+    if d > 0:
+        idx = b - N
+        successors.append(('Up', state[:idx] + [0] + state[idx+1:b] + [state[idx]] + state[b+1:]))
 
-    for di, dj in directions:
-        ni, nj = i + di, j + dj
-        if 0 <= ni < N and 0 <= nj < N:
-            new_state = [row[:] for row in state]
-            new_state[i][j], new_state[ni][nj] = new_state[ni][nj], new_state[i][j]
-            neighbors.append(new_state)
-    return neighbors
 
-def a_star_puzzle(start, goal, N):
-    open_set = [(manhattan_distance(start, goal, N), start, 0, None)]
-    #print(open_set)
-    open_set_set = set([tuple(map(tuple, start))])
-    came_from = {}
-    g_score = {str(start): 0}
-    #print(g_score)
-    #sys.exit()
+    if w < N - 1:
+        idx = b + 1
+        successors.append(('Right', state[:b] + [state[idx]] + [0] + state[b+2:]))
 
-    while open_set:
-        _, current, g, parent = min(open_set, key=lambda x: x[0])
-        open_set.remove((_, current, g, parent))
 
-        if current == goal:
-            path = []
-            while current:
-                path.append(current)
-                current = came_from.get(str(current))
-            return path[::-1]
+    if w > 0:
+        idx = b - 1
+        successors.append(('Left', state[:idx] + [0] + [state[idx]] + state[b+1:]))
 
-        for neighbor in get_neighbors(current, N):
-            neighbor_g = g + 1
-            neighbor_f = neighbor_g + manhattan_distance(neighbor, goal, N)
-            neighbor_str = str(neighbor)
-            
-            if neighbor_g < g_score.get(neighbor_str, float('inf')):
-                came_from[neighbor_str] = current
-                g_score[neighbor_str] = neighbor_g
-                if (neighbor_f, neighbor, neighbor_g, current) not in open_set:
-                    open_set.append((neighbor_f, neighbor, neighbor_g, current))
+    return successors
 
-    return "Path nor found"
+def a_star(start, goal, N, algo='manhattan'):
+    open_list = []
+    heapq.heappush(open_list, (h(start, goal, N, algo), 0, start, []))
+    visited = set()
 
+    while open_list:
+        h_val, g_val, current_state, path = heapq.heappop(open_list)
+        if current_state == goal:
+            return path
+
+        visited.add(tuple(current_state))
+        for move, successor in get_successors(current_state, N):
+            if tuple(successor) not in visited:
+                new_path = path + [move]
+                heapq.heappush(open_list, (g_val + 1 + h(successor, goal, N, algo), g_val + 1, successor, new_path))
+
+    return None 
+
+def ida_star(start, goal, N, algo='manhattan'):
+    def search(node, g, bound, path_so_far):
+        f = g + h(node, goal, N, algo)
+        if f > bound:
+            return f, None
+        if node == goal:
+            return 0, [(node, path_so_far)]
+
+        min_cost = float("inf")
+        min_path = None
+        for move, successor in get_successors(node, N):
+            successor_tuple = tuple(successor)
+            if successor_tuple not in visited:
+                visited.add(successor_tuple)
+                result, path = search(successor, g + 1, bound, path_so_far + [move])
+                if result == 0:
+                    return 0, [(node, path_so_far)] + path
+                if result < min_cost:
+                    min_cost = result
+                    min_path = path
+                visited.remove(successor_tuple)
+        return min_cost, min_path
+
+    open_list = []
+    heapq.heappush(open_list, (h(start, goal, N, algo), 0, start, []))
+    bound = h(start, goal, N, algo)
+    visited = set()
+
+    while True:
+        visited.clear()
+        visited.add(tuple(start))
+        result, path = search(start, 0, bound, [])
+        if result == 0:
+            return [(start, [])] + path
+        if result == float("inf"):
+            return None
+        bound = result
