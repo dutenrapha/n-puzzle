@@ -5,7 +5,7 @@ from time import time
 
 from puzzle import a_star, ida_star
 
-
+from tabulate import tabulate
 
 def parser_board(board, sizeboard):
 
@@ -27,6 +27,12 @@ def parser_board(board, sizeboard):
     return 'continue'
 
 
+def while_if_zero(value):
+	if value == 0:
+		return '\033[47m' + ' ' * len(str(value)) + '\033[0m'
+	else:
+		return value
+
 
 def count_inversions(state):
     flatten_state = [number for line in state for number in line if number != 0]
@@ -46,6 +52,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(prog='N-Puzzle', description='The goal of this project is to programmatically solve the N-puzzle.', epilog='Solve it better than brut force!')
     parser.add_argument('filename', type=argparse.FileType("r"))
     parser.add_argument('-astar', action='store_true')
+    parser.add_argument('-manhattan', action='store_true')
+    parser.add_argument('-euclidean', action='store_true')
+    parser.add_argument('-misplaced', action='store_true')
+    parser.add_argument('-chebyshev', action='store_true')
+    #parser.print_help() REM colocar o help?
     args = parser.parse_args()
 
     with args.filename as file:
@@ -63,34 +74,91 @@ if __name__ == "__main__":
 
     #print(data)
     initial_state = [int(value) for value in data] # Convert into int list
-    # initial_state = [initial_state[i:i+size] for i in range(0, len(initial_state), size)] # group in sublist
+    initial_state_ck = [initial_state[i:i+size] for i in range(0, len(initial_state), size)] # group in sublist
     
     goal_state = list(range(1, size**2 - 1 + 1))
     goal_state.append(0) # insert last element
-    # goal_state = [goal_state[i:i+size] for i in range(0, len(goal_state), size)] # group in sublist
+    goal_state_ck = [goal_state[i:i+size] for i in range(0, len(goal_state), size)] # group in sublist
     
 
     # check if has solution
-    # initial_invertions = count_inversions(initial_state)
-    # goal_invertions = count_inversions(goal_state)
-    # if initial_invertions % 2 != goal_invertions % 2:
-    #     print('\033[0;31mError: No solution.\033[0;00m')
-    #     sys.exit()
+    initial_invertions = count_inversions(initial_state_ck)
+    goal_invertions = count_inversions(goal_state_ck)
+    if initial_invertions % 2 != goal_invertions % 2:
+        print('\033[0;31mError: No solution.\033[0;00m')
+        sys.exit()
 
+    print('initial_state:')
+    print(tabulate(initial_state_ck, tablefmt="fancy_grid"))
+    print('goal_state:')
+    print(tabulate(goal_state_ck, tablefmt="fancy_grid"))
 
     #print(args.astar)
     if args.astar:
-        print('initial_state:', initial_state)
-        print('goal_state:', goal_state)
         start_time = time()
         if size == 3:
-            path = a_star(initial_state, goal_state, size) 
+            if args.manhattan == True:
+                path_states, path, step_max = a_star(initial_state, goal_state, size, "manhattan")
+                print("\n\033[1;32mSolved using method A* with manhattan heuristic\n\033[0;00m")
+            if args.euclidean == True:
+                path_states, path, step_max = a_star(initial_state, goal_state, size, "euclidean")
+                print("\n\033[1;32mSolved using method A* with euclidean heuristic\n\033[0;00m")
+            if args.misplaced == True:
+                path_states, path, step_max = a_star(initial_state, goal_state, size, "misplaced")
+                print("\n\033[1;32mSolved using method A* with misplaced heuristic\n\033[0;00m")
+            if args.chebyshev == True:
+                path_states, path, step_max = a_star(initial_state, goal_state, size, "chebyshev")
+                print("\n\033[1;32mSolved using method A* with chebyshev heuristic\n\033[0;00m")
+
+            stat_val = [['Time (ms)', round((time() - start_time) * 1000,4)],
+                        ['Steps', max(1, len(path))],
+                        ['Steps max', step_max]]
+            print(tabulate(stat_val, tablefmt="pretty"))
+            if len(path) <= 20:
+                print('\nSteps:')
+                for step_state, step_mov in zip(path_states[1:], path):
+                    steps = [step_state[i:i+size] for i in range(0, len(step_state), size)]
+                    print(f'Moviment: {step_mov}')
+                    print(tabulate(steps, tablefmt="fancy_grid"))
+                    print()
         else:
-            path = ida_star(initial_state, goal_state, size) 
-        print('A* Time:', (time() - start_time) * 1000, 'ms')
-        print(f'Steps: {len(path)}')
-        if len(path) <= 20:
-            [print(step) for step in path]
+            if args.manhattan == True:
+                path, step_max = ida_star(initial_state, goal_state, size, "manhattan") 
+                print("\n\033[1;32mSolved using method idA* with manhattan heuristic\n\033[0;00m")
+            if args.euclidean == True:
+                path, step_max = ida_star(initial_state, goal_state, size, "euclidean")
+                print("\n\033[1;32mSolved using method idA* with euclidean heuristic\n\033[0;00m")
+            if args.misplaced == True:
+                path, step_max = ida_star(initial_state, goal_state, size, "misplaced")
+                print("\n\033[1;32mSolved using method idA* with misplaced heuristic\n\033[0;00m")
+            if args.chebyshev == True:
+                path, step_max = ida_star(initial_state, goal_state, size, "chebyshev")
+                print("\n\033[1;32mSolved using method idA* with chebyshev heuristic\n\033[0;00m")
+
+            stat_val = [['Time (ms)', round((time() - start_time) * 1000,4)],
+                        ['Steps', max(1, len(path) - 2)],
+                        ['Steps max', step_max]]
+            print(tabulate(stat_val, tablefmt="pretty"))
+            if len(path) <= 20:
+                print('\nSteps:')
+                for vec, mov in path[1:]:
+                    steps = [vec[i:i+size] for i in range(0, len(vec), size)]
+                    last_mov = mov[-1] if mov else '-'
+                    print(f'Moviment: {last_mov}')
+                    print(tabulate(steps, tablefmt="fancy_grid"))
+                    print()
+
+        
+
+
+            #right_moves = [move for move in path if move[1] and move[1][0] == 'Right']
+            #first_term = right_moves[0][0]
+            #steps = [first_term[i:i+size] for i in range(0, len(first_term), size)]
+            #styled_matrix = [[while_if_zero(value) for value in row] for row in steps]
+            #print(tabulate(styled_matrix, tablefmt="fancy_grid"))
+
+
+    
 
     sys.exit()
 
