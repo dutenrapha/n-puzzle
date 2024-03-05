@@ -42,26 +42,23 @@ def a_star(start, goal, N, algo='manhattan'):
     heapq.heappush(open_list, (h(start, goal, N, algo), 0, start, []))
     visited = set()
     path_states = [] 
-
+    complexity_time = 0
+    complexity_size = 0
     while open_list:
+        complexity_size = max(complexity_size, len(open_list) + len(visited))
         h_val, g_val, current_state, path = heapq.heappop(open_list)
         path_states.append(current_state)
+        complexity_time +=1
         if current_state == goal:
-            #print(path_states)
-            return path_states, path, step_max - 3
-            #return [(start, [])] + path, step_max - 3
-            #print([(start, [])] + path)
-            #return path, step_max - 3
-
+            return path_states, path, step_max - 3, complexity_time, complexity_size
+     
         visited.add(tuple(current_state))
         step_max = step_max + len(visited)
         for move, successor in get_successors(current_state, N):
             if tuple(successor) not in visited:
                 new_path = path + [move]
                 heapq.heappush(open_list, (g_val + 1 + h(successor, goal, N, algo), g_val + 1, successor, new_path))
-                #print(new_path)
                 step_max = step_max + 1
-                #step_max = max(g_val + 1 + h(successor, goal, N, algo), step_max)
     return None 
 
 
@@ -71,38 +68,43 @@ def ida_star(start, goal, N, algo='manhattan'):
         nonlocal step_max
         f = g + h(node, goal, N, algo)
         if f > bound:
-            return f, None
+            return f, None, 1
         if node == goal:
-            return 0, [(node, path_so_far)]
+            return 0, [(node, path_so_far)], 1
 
         min_cost = float("inf")
         min_path = None
+        total_nodes_expanded = 0
         for move, successor in get_successors(node, N):
             successor_tuple = tuple(successor)
             if successor_tuple not in visited:
                 visited.add(successor_tuple)
                 step_max = step_max + len(visited) 
-                result, path = search(successor, g + 1, bound, path_so_far + [move])
+                result, path, nodes_expanded = search(successor, g + 1, bound, path_so_far + [move])
+                total_nodes_expanded += nodes_expanded
                 if result == 0:
-                    return 0, [(node, path_so_far)] + path
+                    return 0, [(node, path_so_far)] + path, total_nodes_expanded
                 if result < min_cost:
                     min_cost = result
                     min_path = path
                 visited.remove(successor_tuple)
-        return min_cost, min_path
+        return min_cost, min_path, total_nodes_expanded
 
     open_list = []
     heapq.heappush(open_list, (h(start, goal, N, algo), 0, start, []))
     bound = h(start, goal, N, algo)
     visited = set()
-    
+    complexity_time = 0
+    complexity_size = 0
 
     while True:
         visited.clear()
         visited.add(tuple(start))
-        result, path = search(start, 0, bound, [])
+        result, path, nodes_expanded = search(start, 0, bound, [])
+        complexity_time += nodes_expanded
+        complexity_size = max(complexity_size, len(visited))
         if result == 0:
-            return [(start, [])] + path, step_max - 3
+            return [(start, [])] + path, step_max - 3, complexity_time, complexity_size
         if result == float("inf"):
             return None
         bound = result
